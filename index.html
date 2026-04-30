@@ -32,14 +32,10 @@
       overflow: hidden;
       margin-bottom: 20px;
     }
-    pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 13px;
-      line-height: 1.6;
-      padding: 18px;
-      color: #334155;
-    }
+    .data-block { padding:16px 20px; }
+    .data-item { margin-bottom:10px; }
+    .data-label { font-size:10px; font-weight:800; color:#94a3b8; }
+    .data-value { font-size:14px; font-weight:600; word-break:break-all; }
     .copy-btn {
       background: #f1f5f9;
       color: #64748b;
@@ -86,7 +82,7 @@
 
 <div id="statusInfo" class="px-6 mb-4 hidden">
   <div class="flex justify-between items-center">
-    <span id="resultCountText" class="text-[11px] font-bold bg-blue-600 text-white px-3 py-1 rounded-full">Raw Response</span>
+    <span id="resultCountText" class="text-[11px] font-bold bg-blue-600 text-white px-3 py-1 rounded-full">0 Records</span>
     <span id="queryDisplay" class="text-[11px] font-bold text-slate-400 truncate max-w-[150px]"></span>
   </div>
 </div>
@@ -112,47 +108,106 @@ async function handleSearch() {
   if (!query) return;
 
   loading.classList.remove("hidden");
-  statusInfo.classList.add("hidden");
   resultsList.innerHTML = "";
+  statusInfo.classList.add("hidden");
 
   try {
-    const response = await fetch("/api/search?q=" + encodeURIComponent(query));
-    const text = await response.text();
+    const res = await fetch("/api/search?q=" + encodeURIComponent(query));
+    const text = await res.text();
 
+    let data = [];
+    try { data = JSON.parse(text); } catch {}
+
+    renderResults(data, query);
+
+  } catch (err) {
     loading.classList.add("hidden");
-    statusInfo.classList.remove("hidden");
-
-    document.getElementById("queryDisplay").innerText = query;
-    document.getElementById("resultCountText").innerText = "Raw Response";
-
-    resultsList.innerHTML = `
-      <div class="leak-card">
-        <div class="bg-slate-50 px-5 py-2 text-[10px] font-bold text-slate-400 border-b border-slate-100 flex justify-between">
-          <span>RAW API RESPONSE</span>
-          <i class="fas fa-shield-alt text-blue-500"></i>
-        </div>
-        <pre id="rawOutput"></pre>
-        <button onclick="copyData()" class="copy-btn">
-          <i class="far fa-copy"></i> COPY RESPONSE
-        </button>
-      </div>
-    `;
-
-    document.getElementById("rawOutput").textContent = text;
-
-  } catch (error) {
-    loading.classList.add("hidden");
-    resultsList.innerHTML = `
-      <div class="text-center py-20">
-        <h3 class="font-bold text-slate-700">API Error</h3>
-        <p class="text-xs text-slate-400 mt-2">${error.message}</p>
-      </div>
-    `;
+    resultsList.innerHTML = "<h3 class='text-center mt-10'>Error loading data</h3>";
   }
 }
 
-function copyData() {
-  const text = document.getElementById("rawOutput")?.textContent || "";
+function renderResults(arr, query) {
+  const resultsList = document.getElementById("resultsList");
+  const loading = document.getElementById("loading");
+  const statusInfo = document.getElementById("statusInfo");
+
+  loading.classList.add("hidden");
+
+  if (!arr.length) {
+    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Records Found</h3>";
+    return;
+  }
+
+  statusInfo.classList.remove("hidden");
+  document.getElementById("resultCountText").innerText = arr.length + " Lines";
+  document.getElementById("queryDisplay").innerText = query;
+
+  let current = {};
+  let count = 0;
+
+  arr.forEach(line => {
+    if (line.includes("Email:")) current.email = line.split("Email:")[1].trim();
+    if (line.includes("Password:")) current.password = line.split("Password:")[1].trim();
+    if (line.includes("Mobile:")) current.mobile = line.split("Mobile:")[1].trim();
+    if (line.includes("Full name:")) current.name = line.split("Full name:")[1].trim();
+    if (line.includes("Address:")) current.address = line.split("Address:")[1].trim();
+    if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
+
+    if (current.email && current.password) {
+      addCard(current);
+      current = {};
+      count++;
+    }
+  });
+
+  if (count === 0) {
+    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Structured Data Found</h3>";
+  }
+}
+
+function addCard(data) {
+  const resultsList = document.getElementById("resultsList");
+
+  const card = document.createElement("div");
+  card.className = "leak-card";
+
+  let html = `
+  <div class="bg-slate-50 px-5 py-2 text-[10px] font-bold text-slate-400 border-b flex justify-between">
+    <span>CONSOLIDATED LEAK REPORT</span>
+    <i class="fas fa-shield-check text-green-500"></i>
+  </div>
+  <div class="data-block">
+  `;
+
+  if (data.email) html += item("Email", data.email);
+  if (data.password) html += item("Password", data.password, true);
+  if (data.mobile) html += item("Mobile", data.mobile);
+  if (data.name) html += item("Name", data.name);
+  if (data.address) html += item("Address", data.address);
+  if (data.link) html += item("Site", data.link);
+
+  html += "</div>";
+
+  const plain = Object.entries(data).map(([k,v]) => k + ": " + v).join("\n");
+
+  html += `
+  <button onclick="copyData(\`${plain.replace(/`/g,"'")}\`)" class="copy-btn">
+    <i class="far fa-copy"></i> COPY RECORD
+  </button>`;
+
+  card.innerHTML = html;
+  resultsList.appendChild(card);
+}
+
+function item(label, value, blue=false) {
+  return `
+  <div class="data-item">
+    <div class="data-label">${label}</div>
+    <div class="data-value ${blue ? "text-blue-600":""}">${value}</div>
+  </div>`;
+}
+
+function copyData(text) {
   navigator.clipboard.writeText(text).then(() => {
     const toast = document.getElementById("toast");
     toast.style.opacity = "1";
@@ -160,7 +215,7 @@ function copyData() {
   });
 }
 
-document.getElementById("searchInput").addEventListener("keyup", (e) => {
+document.getElementById("searchInput").addEventListener("keyup", e => {
   if (e.key === "Enter") handleSearch();
 });
 </script>
