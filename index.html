@@ -10,213 +10,107 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
   <style>
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #f8fafc;
-      color: #1e293b;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .search-container {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(248, 250, 252, 0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .leak-card {
-      background: white;
-      border-radius: 24px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
-    .data-block { padding:16px 20px; }
-    .data-item { margin-bottom:10px; }
-    .data-label { font-size:10px; font-weight:800; color:#94a3b8; }
-    .data-value { font-size:14px; font-weight:600; word-break:break-all; }
-    .copy-btn {
-      background: #f1f5f9;
-      color: #64748b;
-      border-radius: 12px;
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin: 0 20px 15px auto;
-    }
-    .loader {
-      border-top-color: #3b82f6;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    body { font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#1e293b;}
+    .search-container {position:sticky;top:0;background:rgba(248,250,252,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;}
+    .leak-card {background:#fff;border-radius:24px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.03);margin-bottom:20px;}
+    .data-block{padding:16px 20px;}
+    .data-label{font-size:10px;font-weight:800;color:#94a3b8;}
+    .data-value{font-size:14px;font-weight:600;word-break:break-all;}
+    .copy-btn{background:#f1f5f9;color:#64748b;border-radius:12px;padding:8px 16px;font-size:12px;font-weight:700;margin:0 20px 15px auto;}
+    .loader{border-top-color:#3b82f6;animation:spin 0.8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
   </style>
 </head>
 
 <body class="pb-20">
 
 <header class="px-6 pt-8 pb-4 flex justify-between items-center">
-  <div>
-    <h1 class="text-2xl font-extrabold text-blue-600 tracking-tight">OSINT Pro</h1>
-    <a href="https://t.me/indian_methods" target="_blank" class="text-slate-500 text-xs font-medium flex items-center gap-1">
-      Developed by <span class="text-blue-500 font-bold ml-1"><i class="fab fa-telegram"></i> @indian_methods</span>
-    </a>
-  </div>
-  <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-    <i class="fas fa-fingerprint"></i>
-  </div>
+  <h1 class="text-2xl font-extrabold text-blue-600">OSINT Pro</h1>
 </header>
 
 <div class="search-container px-4 py-4 mb-4">
-  <div class="relative flex items-center">
-    <input id="searchInput" type="text" placeholder="Enter search text..."
-      class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 pr-16 focus:outline-none focus:border-blue-500 shadow-sm text-base">
-    <button onclick="handleSearch()" class="absolute right-2 bg-blue-600 text-white w-12 h-12 rounded-xl flex items-center justify-center">
-      <i class="fas fa-search text-lg"></i>
-    </button>
-  </div>
-</div>
-
-<div id="statusInfo" class="px-6 mb-4 hidden">
-  <div class="flex justify-between items-center">
-    <span id="resultCountText" class="text-[11px] font-bold bg-blue-600 text-white px-3 py-1 rounded-full">0 Records</span>
-    <span id="queryDisplay" class="text-[11px] font-bold text-slate-400 truncate max-w-[150px]"></span>
-  </div>
+  <input id="searchInput" placeholder="Search..." class="w-full p-4 border rounded-xl">
 </div>
 
 <main id="resultsList" class="px-4"></main>
 
-<div id="loading" class="hidden fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-[200]">
-  <div class="loader rounded-full border-4 border-slate-100 h-12 w-12 mb-4"></div>
-  <p class="font-bold text-slate-800">Searching...</p>
-</div>
-
-<div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-bold shadow-2xl opacity-0 transition-all pointer-events-none z-[300]">
-  Copied!
+<div id="loading" class="hidden fixed inset-0 bg-white/95 flex items-center justify-center">
+  <div class="loader border-4 border-slate-100 h-12 w-12"></div>
 </div>
 
 <script>
-async function handleSearch() {
-  const query = document.getElementById("searchInput").value.trim();
-  const resultsList = document.getElementById("resultsList");
-  const loading = document.getElementById("loading");
-  const statusInfo = document.getElementById("statusInfo");
+async function handleSearch(){
+  const q=document.getElementById("searchInput").value.trim();
+  if(!q)return;
 
-  if (!query) return;
+  document.getElementById("loading").classList.remove("hidden");
+  const res=await fetch("/api/search?q="+encodeURIComponent(q));
+  const text=await res.text();
 
-  loading.classList.remove("hidden");
-  resultsList.innerHTML = "";
-  statusInfo.classList.add("hidden");
+  let data=[];
+  try{data=JSON.parse(text);}catch{}
 
-  try {
-    const res = await fetch("/api/search?q=" + encodeURIComponent(query));
-    const text = await res.text();
-
-    let data = [];
-    try { data = JSON.parse(text); } catch {}
-
-    renderResults(data, query);
-
-  } catch (err) {
-    loading.classList.add("hidden");
-    resultsList.innerHTML = "<h3 class='text-center mt-10'>Error loading data</h3>";
-  }
+  process(data);
 }
 
-function renderResults(arr, query) {
-  const resultsList = document.getElementById("resultsList");
-  const loading = document.getElementById("loading");
-  const statusInfo = document.getElementById("statusInfo");
+function process(arr){
+  const out=document.getElementById("resultsList");
+  out.innerHTML="";
+  document.getElementById("loading").classList.add("hidden");
 
-  loading.classList.add("hidden");
+  if(!arr.length){out.innerHTML="<h3>No data</h3>";return;}
 
-  if (!arr.length) {
-    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Records Found</h3>";
-    return;
-  }
+  let map={};
 
-  statusInfo.classList.remove("hidden");
-  document.getElementById("resultCountText").innerText = arr.length + " Lines";
-  document.getElementById("queryDisplay").innerText = query;
+  arr.forEach(line=>{
+    line=line.trim();
 
-  let current = {};
-  let count = 0;
+    if(line.includes("Email:")){
+      const email=line.split("Email:")[1].trim();
+      if(!map[email]) map[email]={email,passwords:[],links:[]};
+      map._current=email;
+    }
 
-  arr.forEach(line => {
-    if (line.includes("Email:")) current.email = line.split("Email:")[1].trim();
-    if (line.includes("Password:")) current.password = line.split("Password:")[1].trim();
-    if (line.includes("Mobile:")) current.mobile = line.split("Mobile:")[1].trim();
-    if (line.includes("Full name:")) current.name = line.split("Full name:")[1].trim();
-    if (line.includes("Address:")) current.address = line.split("Address:")[1].trim();
-    if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
+    if(line.includes("Password:") && map._current){
+      map[map._current].passwords.push(line.split("Password:")[1].trim());
+    }
 
-    if (current.email && current.password) {
-      addCard(current);
-      current = {};
-      count++;
+    if(line.includes("Link:") && map._current){
+      map[map._current].links.push(line.split("Link:")[1].trim());
     }
   });
 
-  if (count === 0) {
-    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Structured Data Found</h3>";
-  }
-}
+  Object.values(map).forEach(data=>{
+    if(!data.email)return;
 
-function addCard(data) {
-  const resultsList = document.getElementById("resultsList");
+    let html=`
+    <div class="leak-card">
+      <div class="data-block">
+        <div class="data-label">Email</div>
+        <div class="data-value">${data.email}</div>
+    `;
 
-  const card = document.createElement("div");
-  card.className = "leak-card";
+    if(data.passwords.length){
+      html+=`<div class="data-label mt-2">Passwords</div>`;
+      data.passwords.forEach(p=>{
+        html+=`<div class="data-value text-blue-600">${p}</div>`;
+      });
+    }
 
-  let html = `
-  <div class="bg-slate-50 px-5 py-2 text-[10px] font-bold text-slate-400 border-b flex justify-between">
-    <span>CONSOLIDATED LEAK REPORT</span>
-    <i class="fas fa-shield-check text-green-500"></i>
-  </div>
-  <div class="data-block">
-  `;
+    if(data.links.length){
+      html+=`<div class="data-label mt-2">Sites</div>`;
+      data.links.forEach(l=>{
+        html+=`<div class="data-value">${l}</div>`;
+      });
+    }
 
-  if (data.email) html += item("Email", data.email);
-  if (data.password) html += item("Password", data.password, true);
-  if (data.mobile) html += item("Mobile", data.mobile);
-  if (data.name) html += item("Name", data.name);
-  if (data.address) html += item("Address", data.address);
-  if (data.link) html += item("Site", data.link);
-
-  html += "</div>";
-
-  const plain = Object.entries(data).map(([k,v]) => k + ": " + v).join("\n");
-
-  html += `
-  <button onclick="copyData(\`${plain.replace(/`/g,"'")}\`)" class="copy-btn">
-    <i class="far fa-copy"></i> COPY RECORD
-  </button>`;
-
-  card.innerHTML = html;
-  resultsList.appendChild(card);
-}
-
-function item(label, value, blue=false) {
-  return `
-  <div class="data-item">
-    <div class="data-label">${label}</div>
-    <div class="data-value ${blue ? "text-blue-600":""}">${value}</div>
-  </div>`;
-}
-
-function copyData(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    const toast = document.getElementById("toast");
-    toast.style.opacity = "1";
-    setTimeout(() => toast.style.opacity = "0", 2000);
+    html+=`</div></div>`;
+    out.innerHTML+=html;
   });
 }
 
-document.getElementById("searchInput").addEventListener("keyup", e => {
-  if (e.key === "Enter") handleSearch();
+document.getElementById("searchInput").addEventListener("keyup",e=>{
+  if(e.key==="Enter")handleSearch();
 });
 </script>
 
