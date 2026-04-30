@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OSINT Pro - @indian_methods</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .search-container {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(248, 250, 252, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .leak-card {
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 18px;
+      color: #334155;
+    }
+    .copy-btn {
+      background: #f1f5f9;
+      color: #64748b;
+      border-radius: 12px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0 20px 15px auto;
+    }
+    .loader {
+      border-top-color: #3b82f6;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body class="pb-20">
+
+<header class="px-6 pt-8 pb-4 flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-extrabold text-blue-600 tracking-tight">OSINT Pro</h1>
+    <a href="https://t.me/indian_methods" target="_blank" class="text-slate-500 text-xs font-medium flex items-center gap-1">
+      Developed by <span class="text-blue-500 font-bold ml-1"><i class="fab fa-telegram"></i> @indian_methods</span>
+    </a>
+  </div>
+  <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+    <i class="fas fa-fingerprint"></i>
+  </div>
+</header>
+
+<div class="search-container px-4 py-4 mb-4">
+  <div class="relative flex items-center">
+    <input id="searchInput" type="text" placeholder="Enter search text..."
+      class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 pr-16 focus:outline-none focus:border-blue-500 shadow-sm text-base">
+    <button onclick="handleSearch()" class="absolute right-2 bg-blue-600 text-white w-12 h-12 rounded-xl flex items-center justify-center">
+      <i class="fas fa-search text-lg"></i>
+    </button>
+  </div>
+</div>
+
+<div id="statusInfo" class="px-6 mb-4 hidden">
+  <div class="flex justify-between items-center">
+    <span id="resultCountText" class="text-[11px] font-bold bg-blue-600 text-white px-3 py-1 rounded-full">Raw Response</span>
+    <span id="queryDisplay" class="text-[11px] font-bold text-slate-400 truncate max-w-[150px]"></span>
+  </div>
+</div>
+
+<main id="resultsList" class="px-4"></main>
+
+<div id="loading" class="hidden fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-[200]">
+  <div class="loader rounded-full border-4 border-slate-100 h-12 w-12 mb-4"></div>
+  <p class="font-bold text-slate-800">Searching...</p>
+</div>
+
+<div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-bold shadow-2xl opacity-0 transition-all pointer-events-none z-[300]">
+  Copied!
+</div>
+
+<script>
+async function handleSearch() {
+  const query = document.getElementById("searchInput").value.trim();
+  const resultsList = document.getElementById("resultsList");
+  const loading = document.getElementById("loading");
+  const statusInfo = document.getElementById("statusInfo");
+
+  if (!query) return;
+
+  loading.classList.remove("hidden");
+  statusInfo.classList.add("hidden");
+  resultsList.innerHTML = "";
+
+  try {
+    const response = await fetch("/api/search?q=" + encodeURIComponent(query));
+    const text = await response.text();
+
+    loading.classList.add("hidden");
+    statusInfo.classList.remove("hidden");
+
+    document.getElementById("queryDisplay").innerText = query;
+    document.getElementById("resultCountText").innerText = "Raw Response";
+
+    resultsList.innerHTML = `
+      <div class="leak-card">
+        <div class="bg-slate-50 px-5 py-2 text-[10px] font-bold text-slate-400 border-b border-slate-100 flex justify-between">
+          <span>RAW API RESPONSE</span>
+          <i class="fas fa-shield-alt text-blue-500"></i>
+        </div>
+        <pre id="rawOutput"></pre>
+        <button onclick="copyData()" class="copy-btn">
+          <i class="far fa-copy"></i> COPY RESPONSE
+        </button>
+      </div>
+    `;
+
+    document.getElementById("rawOutput").textContent = text;
+
+  } catch (error) {
+    loading.classList.add("hidden");
+    resultsList.innerHTML = `
+      <div class="text-center py-20">
+        <h3 class="font-bold text-slate-700">API Error</h3>
+        <p class="text-xs text-slate-400 mt-2">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+function copyData() {
+  const text = document.getElementById("rawOutput")?.textContent || "";
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById("toast");
+    toast.style.opacity = "1";
+    setTimeout(() => toast.style.opacity = "0", 2000);
+  });
+}
+
+document.getElementById("searchInput").addEventListener("keyup", (e) => {
+  if (e.key === "Enter") handleSearch();
+});
+</script>
+
+</body>
+</html>
