@@ -61,6 +61,12 @@
 <header class="px-6 pt-8 pb-4 flex justify-between items-center">
   <div>
     <h1 class="text-2xl font-extrabold text-blue-600 tracking-tight">OSINT Pro</h1>
+    <a href="https://t.me/indian_methods" target="_blank" class="text-slate-500 text-xs font-medium flex items-center gap-1">
+      Developed by <span class="text-blue-500 font-bold ml-1"><i class="fab fa-telegram"></i> @indian_methods</span>
+    </a>
+  </div>
+  <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+    <i class="fas fa-fingerprint"></i>
   </div>
 </header>
 
@@ -83,81 +89,80 @@
 
 <main id="resultsList" class="px-4"></main>
 
-<div id="loadMoreContainer" class="px-4 text-center hidden">
-  <button onclick="loadMore()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold">
-    Load More
-  </button>
-</div>
-
 <div id="loading" class="hidden fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-[200]">
   <div class="loader rounded-full border-4 border-slate-100 h-12 w-12 mb-4"></div>
   <p class="font-bold text-slate-800">Searching...</p>
 </div>
 
-<script>
-let GLOBAL_DATA = [];
-let POINTER = 0;
-const LIMIT = 50;
+<div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-bold shadow-2xl opacity-0 transition-all pointer-events-none z-[300]">
+  Copied!
+</div>
 
+<script>
 async function handleSearch() {
   const query = document.getElementById("searchInput").value.trim();
+  const resultsList = document.getElementById("resultsList");
+  const loading = document.getElementById("loading");
+  const statusInfo = document.getElementById("statusInfo");
+
   if (!query) return;
 
-  document.getElementById("loading").classList.remove("hidden");
-  document.getElementById("resultsList").innerHTML = "";
-  document.getElementById("statusInfo").classList.add("hidden");
-
-  const res = await fetch("/api/search?q=" + encodeURIComponent(query));
-  const text = await res.text();
+  loading.classList.remove("hidden");
+  resultsList.innerHTML = "";
+  statusInfo.classList.add("hidden");
 
   try {
-    GLOBAL_DATA = JSON.parse(text);
-  } catch {
-    GLOBAL_DATA = [];
+    const res = await fetch("/api/search?q=" + encodeURIComponent(query));
+    const text = await res.text();
+
+    let data = [];
+    try { data = JSON.parse(text); } catch {}
+
+    renderResults(data, query);
+
+  } catch (err) {
+    loading.classList.add("hidden");
+    resultsList.innerHTML = "<h3 class='text-center mt-10'>Error loading data</h3>";
   }
-
-  POINTER = 0;
-
-  document.getElementById("loading").classList.add("hidden");
-
-  document.getElementById("statusInfo").classList.remove("hidden");
-  document.getElementById("resultCountText").innerText = GLOBAL_DATA.length + " Lines";
-  document.getElementById("queryDisplay").innerText = query;
-
-  processChunk();
 }
 
-function processChunk() {
-  let chunk = GLOBAL_DATA.slice(POINTER, POINTER + LIMIT);
-  POINTER += LIMIT;
+function renderResults(arr, query) {
+  const resultsList = document.getElementById("resultsList");
+  const loading = document.getElementById("loading");
+  const statusInfo = document.getElementById("statusInfo");
+
+  loading.classList.add("hidden");
+
+  if (!arr.length) {
+    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Records Found</h3>";
+    return;
+  }
+
+  statusInfo.classList.remove("hidden");
+  document.getElementById("resultCountText").innerText = arr.length + " Lines";
+  document.getElementById("queryDisplay").innerText = query;
 
   let current = {};
+  let count = 0;
 
-  chunk.forEach(line => {
-    line = line.trim();
-
+  arr.forEach(line => {
     if (line.includes("Email:")) current.email = line.split("Email:")[1].trim();
-    else if (line.includes("Password:")) current.password = line.split("Password:")[1].trim();
-    else if (line.includes("Mobile:")) current.mobile = line.split("Mobile:")[1].trim();
-    else if (line.includes("Full name:")) current.name = line.split("Full name:")[1].trim();
-    else if (line.includes("Address:")) current.address = line.split("Address:")[1].trim();
-    else if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
+    if (line.includes("Password:")) current.password = line.split("Password:")[1].trim();
+    if (line.includes("Mobile:")) current.mobile = line.split("Mobile:")[1].trim();
+    if (line.includes("Full name:")) current.name = line.split("Full name:")[1].trim();
+    if (line.includes("Address:")) current.address = line.split("Address:")[1].trim();
+    if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
 
     if (current.email && current.password) {
       addCard(current);
       current = {};
+      count++;
     }
   });
 
-  if (POINTER < GLOBAL_DATA.length) {
-    document.getElementById("loadMoreContainer").classList.remove("hidden");
-  } else {
-    document.getElementById("loadMoreContainer").classList.add("hidden");
+  if (count === 0) {
+    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Structured Data Found</h3>";
   }
-}
-
-function loadMore() {
-  processChunk();
 }
 
 function addCard(data) {
@@ -183,6 +188,13 @@ function addCard(data) {
 
   html += "</div>";
 
+  const plain = Object.entries(data).map(([k,v]) => k + ": " + v).join("\n");
+
+  html += `
+  <button onclick="copyData(\`${plain.replace(/`/g,"'")}\`)" class="copy-btn">
+    <i class="far fa-copy"></i> COPY RECORD
+  </button>`;
+
   card.innerHTML = html;
   resultsList.appendChild(card);
 }
@@ -193,6 +205,14 @@ function item(label, value, blue=false) {
     <div class="data-label">${label}</div>
     <div class="data-value ${blue ? "text-blue-600":""}">${value}</div>
   </div>`;
+}
+
+function copyData(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById("toast");
+    toast.style.opacity = "1";
+    setTimeout(() => toast.style.opacity = "0", 2000);
+  });
 }
 
 document.getElementById("searchInput").addEventListener("keyup", e => {
