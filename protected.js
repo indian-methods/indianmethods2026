@@ -3,21 +3,20 @@
 function normalize(input) {
   input = input.toLowerCase().trim();
 
-  // remove spaces + weird chars
-  input = input.replace(/\s+/g, "");
-  input = input.replace(/[^a-z0-9@.+]/g, "");
-
-  // normalize indian numbers
-  if (input.startsWith("+91")) {
-    input = input.replace("+91", "");
+  // email case
+  if (input.includes("@")) {
+    return input.replace(/\s+/g, "");
   }
 
-  // agar 10 digit number hai
-  if (/^\d{10}$/.test(input)) {
-    return input;
+  // 🔥 sab non-digit hata do
+  let digits = input.replace(/\D/g, "");
+
+  // 🔥 last 10 digit lo (main fix)
+  if (digits.length >= 10) {
+    digits = digits.slice(-10);
   }
 
-  return input;
+  return digits;
 }
 
 async function hashText(text) {
@@ -32,7 +31,7 @@ async function hashText(text) {
     .join("");
 }
 
-// 🔥 protected hashes (already correct)
+// 🔥 protected hashes (same)
 const PROTECTED_HASHES = [
   "950d846b1adc09c4bc5640b2c0c5bdbcfbe387b9cb287d024a32eef335a3815b",
   "148afe0fb4cfe6eff4a244be7feedca1143d3f61869a4243e40f992e8aada46a",
@@ -58,6 +57,6 @@ function showProtectedWarning() {
     "⚠️ PROTECTED DATA WARNING\n\n" +
     "This number or email has been highly protected by the owner.\n\n" +
     "Unauthorized lookup attempts are monitored.\n\n" +
-    "Repeated search attempts may be logged."
+    "Do not try to bypass this protection."
   );
 }
