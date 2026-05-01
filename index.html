@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="protected.js"></script>
 
   <style>
     body {
@@ -111,6 +112,10 @@ const CHUNK = 5;
 
 async function handleSearch() {
   const query = document.getElementById("searchInput").value.trim();
+  if (await checkProtected(query)) {
+  showProtectedWarning();
+  return;
+}
   if (!query) return;
 
   document.getElementById("loading").classList.remove("hidden");
