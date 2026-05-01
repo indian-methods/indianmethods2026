@@ -111,12 +111,14 @@ let renderIndex = 0;
 const CHUNK = 5;
 
 async function handleSearch() {
-  const query = document.getElementById("searchInput").value.trim();
-  if (await checkProtected(query)) {
+const query = document.getElementById("searchInput").value.trim();
+
+if (!query) return;   // pehle ye
+
+if (await checkProtected(query)) {
   showProtectedWarning();
   return;
 }
-  if (!query) return;
 
   document.getElementById("loading").classList.remove("hidden");
   document.getElementById("resultsList").innerHTML = "";
