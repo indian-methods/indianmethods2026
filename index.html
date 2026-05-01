@@ -154,7 +154,8 @@ function parseRecords(arr) {
 
   arr.forEach(line => {
 
-    if (line.includes("Email:") && Object.keys(current).length) {
+    // 🔥 Email ya Mobile aaye = new record start
+    if ((line.includes("Email:") || line.includes("Mobile:")) && Object.keys(current).length) {
       recs.push(current);
       current = {};
     }
@@ -171,7 +172,7 @@ function parseRecords(arr) {
 
   return recs;
 }
-
+  
 function renderChunk() {
   const slice = records.slice(renderIndex, renderIndex + CHUNK);
 
