@@ -150,25 +150,40 @@ if (await checkProtected(query)) {
 
 function parseRecords(arr) {
   let recs = [];
-  let current = {};
+  let current = null;
 
   arr.forEach(line => {
+    line = line.trim();
 
-    // 🔥 Email ya Mobile aaye = new record start
-    if ((line.includes("Email:") || line.includes("Mobile:")) && Object.keys(current).length) {
-      recs.push(current);
+    // 🔥 NEW RECORD when Mobile or Email
+    if (line.includes("Mobile:") || line.includes("Email:")) {
+      if (current) recs.push(current);
+
       current = {};
+
+      if (line.includes("Mobile:")) {
+        current.mobile = line.split("Mobile:")[1].trim();
+      }
+
+      if (line.includes("Email:")) {
+        current.email = line.split("Email:")[1].trim();
+      }
+
+      return;
     }
 
-    if (line.includes("Email:")) current.email = line.split("Email:")[1].trim();
+    // 👇 agar current record hai tab hi data add karo
+    if (!current) return;
+
     if (line.includes("Password:")) current.password = line.split("Password:")[1].trim();
-    if (line.includes("Mobile:")) current.mobile = line.split("Mobile:")[1].trim();
     if (line.includes("Full name:")) current.name = line.split("Full name:")[1].trim();
     if (line.includes("Address:")) current.address = line.split("Address:")[1].trim();
     if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
+    if (line.includes("Region:")) current.region = line.split("Region:")[1].trim();
+    if (line.includes("The name of the father:")) current.father = line.split("The name of the father:")[1].trim();
   });
 
-  if (Object.keys(current).length) recs.push(current);
+  if (current) recs.push(current);
 
   return recs;
 }
