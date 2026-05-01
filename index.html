@@ -89,6 +89,13 @@
 
 <main id="resultsList" class="px-4"></main>
 
+<!-- 🔥 LOAD MORE BUTTON -->
+<div class="flex justify-center">
+  <button id="loadMoreBtn" class="hidden bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">
+    Load More
+  </button>
+</div>
+
 <div id="loading" class="hidden fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-[200]">
   <div class="loader rounded-full border-4 border-slate-100 h-12 w-12 mb-4"></div>
   <p class="font-bold text-slate-800">Searching...</p>
@@ -99,6 +106,10 @@
 </div>
 
 <script>
+let globalData = [];
+let renderIndex = 0;
+const CHUNK = 100;
+
 async function handleSearch() {
   const query = document.getElementById("searchInput").value.trim();
   const resultsList = document.getElementById("resultsList");
@@ -115,44 +126,35 @@ async function handleSearch() {
     const res = await fetch("/api/search?q=" + encodeURIComponent(query));
     const text = await res.text();
 
-    let data = [];
     try { 
-      data = JSON.parse(text); 
+      globalData = JSON.parse(text); 
     } catch {
-      // 🔥 FIX: large raw text support
-      data = text.split(/\r?\n/).filter(x => x.trim());
+      globalData = text.split(/\r?\n/).filter(x => x.trim());
     }
 
-    renderResults(data, query);
+    renderIndex = 0;
+
+    statusInfo.classList.remove("hidden");
+    document.getElementById("resultCountText").innerText = globalData.length + " Lines";
+    document.getElementById("queryDisplay").innerText = query;
+
+    renderChunk();
 
   } catch (err) {
-    loading.classList.add("hidden");
     resultsList.innerHTML = "<h3 class='text-center mt-10'>Error loading data</h3>";
   }
-}
-
-function renderResults(arr, query) {
-  const resultsList = document.getElementById("resultsList");
-  const loading = document.getElementById("loading");
-  const statusInfo = document.getElementById("statusInfo");
 
   loading.classList.add("hidden");
+}
 
-  if (!arr.length) {
-    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Records Found</h3>";
-    return;
-  }
-
-  statusInfo.classList.remove("hidden");
-  document.getElementById("resultCountText").innerText = arr.length + " Lines";
-  document.getElementById("queryDisplay").innerText = query;
+function renderChunk() {
+  const slice = globalData.slice(renderIndex, renderIndex + CHUNK);
 
   let current = {};
   let count = 0;
 
-  arr.forEach(line => {
+  slice.forEach(line => {
 
-    // 🔥 FIX: new record start
     if (line.includes("Email:") && Object.keys(current).length) {
       addCard(current);
       current = {};
@@ -167,16 +169,16 @@ function renderResults(arr, query) {
     if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
   });
 
-  // 🔥 last record push
-  if (Object.keys(current).length) {
-    addCard(current);
-    count++;
-  }
+  renderIndex += CHUNK;
 
-  if (count === 0) {
-    resultsList.innerHTML = "<h3 class='text-center mt-10'>No Structured Data Found</h3>";
+  if (renderIndex < globalData.length) {
+    document.getElementById("loadMoreBtn").classList.remove("hidden");
+  } else {
+    document.getElementById("loadMoreBtn").classList.add("hidden");
   }
 }
+
+document.getElementById("loadMoreBtn").onclick = renderChunk;
 
 function addCard(data) {
   const resultsList = document.getElementById("resultsList");
