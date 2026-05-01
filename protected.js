@@ -1,8 +1,30 @@
 // protected.js
 
+function normalize(input) {
+  input = input.toLowerCase().trim();
+
+  // remove spaces + weird chars
+  input = input.replace(/\s+/g, "");
+  input = input.replace(/[^a-z0-9@.+]/g, "");
+
+  // normalize indian numbers
+  if (input.startsWith("+91")) {
+    input = input.replace("+91", "");
+  }
+
+  // agar 10 digit number hai
+  if (/^\d{10}$/.test(input)) {
+    return input;
+  }
+
+  return input;
+}
+
 async function hashText(text) {
+  const normalized = normalize(text);
+
   const encoder = new TextEncoder();
-  const data = encoder.encode(text.toLowerCase().trim());
+  const data = encoder.encode(normalized);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
   return Array.from(new Uint8Array(hashBuffer))
@@ -10,6 +32,7 @@ async function hashText(text) {
     .join("");
 }
 
+// 🔥 protected hashes (already correct)
 const PROTECTED_HASHES = [
   "950d846b1adc09c4bc5640b2c0c5bdbcfbe387b9cb287d024a32eef335a3815b",
   "148afe0fb4cfe6eff4a244be7feedca1143d3f61869a4243e40f992e8aada46a",
@@ -26,15 +49,15 @@ const PROTECTED_HASHES = [
 ];
 
 async function checkProtected(query) {
-  const inputHash = await hashText(query);
-  return PROTECTED_HASHES.includes(inputHash);
+  const hash = await hashText(query);
+  return PROTECTED_HASHES.includes(hash);
 }
 
 function showProtectedWarning() {
   alert(
     "⚠️ PROTECTED DATA WARNING\n\n" +
     "This number or email has been highly protected by the owner.\n\n" +
-    "Unauthorized lookup attempts are monitored and may be reported.\n\n" +
-    "Do not try to search this protected data again."
+    "Unauthorized lookup attempts are monitored.\n\n" +
+    "Repeated search attempts may be logged."
   );
 }
