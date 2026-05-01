@@ -54,9 +54,12 @@ async function checkProtected(query) {
 
 function showProtectedWarning() {
   alert(
-    "⚠️ PROTECTED DATA WARNING\n\n" +
-    "This number or email has been highly protected by the owner.\n\n" +
-    "Unauthorized lookup attempts are monitored.\n\n" +
-    "Do not try to bypass this protection."
+   "⚠️ PROTECTED DATA WARNING\n\n" +
+   "This number/email is strictly private and protected by the owner.\n\n" +
+   "Any unauthorized lookup or search activity is automatically monitored and logged.\n\n" +
+   "Repeated attempts may trigger trace detection systems, and appropriate action will be taken.\n\n" +
+   "If you're seeing this, consider it your final warning —\n" +
+   "do not attempt to search or access this data again, anywhere.\n\n" +
+   "Respect privacy. Stay safe."
   );
 }
