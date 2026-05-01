@@ -89,7 +89,6 @@
 
 <main id="resultsList" class="px-4"></main>
 
-<!-- 🔥 LOAD MORE BUTTON -->
 <div class="flex justify-center">
   <button id="loadMoreBtn" class="hidden bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">
     Load More
@@ -106,59 +105,51 @@
 </div>
 
 <script>
-let globalData = [];
+let records = [];
 let renderIndex = 0;
-const CHUNK = 100;
+const CHUNK = 5;
 
 async function handleSearch() {
   const query = document.getElementById("searchInput").value.trim();
-  const resultsList = document.getElementById("resultsList");
-  const loading = document.getElementById("loading");
-  const statusInfo = document.getElementById("statusInfo");
-
   if (!query) return;
 
-  loading.classList.remove("hidden");
-  resultsList.innerHTML = "";
-  statusInfo.classList.add("hidden");
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("resultsList").innerHTML = "";
+  document.getElementById("statusInfo").classList.add("hidden");
 
   try {
     const res = await fetch("/api/search?q=" + encodeURIComponent(query));
     const text = await res.text();
 
-    try { 
-      globalData = JSON.parse(text); 
-    } catch {
-      globalData = text.split(/\r?\n/).filter(x => x.trim());
-    }
+    let data;
+    try { data = JSON.parse(text); }
+    catch { data = text.split(/\r?\n/).filter(x => x.trim()); }
 
+    records = parseRecords(data);
     renderIndex = 0;
 
-    statusInfo.classList.remove("hidden");
-    document.getElementById("resultCountText").innerText = globalData.length + " Lines";
+    document.getElementById("statusInfo").classList.remove("hidden");
+    document.getElementById("resultCountText").innerText = records.length + " Records";
     document.getElementById("queryDisplay").innerText = query;
 
     renderChunk();
 
-  } catch (err) {
-    resultsList.innerHTML = "<h3 class='text-center mt-10'>Error loading data</h3>";
+  } catch {
+    document.getElementById("resultsList").innerHTML = "<h3 class='text-center mt-10'>Error loading data</h3>";
   }
 
-  loading.classList.add("hidden");
+  document.getElementById("loading").classList.add("hidden");
 }
 
-function renderChunk() {
-  const slice = globalData.slice(renderIndex, renderIndex + CHUNK);
-
+function parseRecords(arr) {
+  let recs = [];
   let current = {};
-  let count = 0;
 
-  slice.forEach(line => {
+  arr.forEach(line => {
 
     if (line.includes("Email:") && Object.keys(current).length) {
-      addCard(current);
+      recs.push(current);
       current = {};
-      count++;
     }
 
     if (line.includes("Email:")) current.email = line.split("Email:")[1].trim();
@@ -169,9 +160,19 @@ function renderChunk() {
     if (line.includes("Link:")) current.link = line.split("Link:")[1].trim();
   });
 
+  if (Object.keys(current).length) recs.push(current);
+
+  return recs;
+}
+
+function renderChunk() {
+  const slice = records.slice(renderIndex, renderIndex + CHUNK);
+
+  slice.forEach(rec => addCard(rec));
+
   renderIndex += CHUNK;
 
-  if (renderIndex < globalData.length) {
+  if (renderIndex < records.length) {
     document.getElementById("loadMoreBtn").classList.remove("hidden");
   } else {
     document.getElementById("loadMoreBtn").classList.add("hidden");
